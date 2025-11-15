@@ -1,21 +1,5 @@
-const nodemailer = require('nodemailer');
 const User = require('../models/userSchema');
-
-// Configure nodemailer
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error('Email configuration missing. Please set EMAIL_USER and EMAIL_PASS in .env file');
-}
-
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false 
-    }
-});
+const { addEmailJob, addActivityLogJob } = require('../utils/queueManager');
 
 const sendConnectionRequest = async (req, res) => {
     try {
@@ -38,8 +22,8 @@ const sendConnectionRequest = async (req, res) => {
         const requestingUser = await User.findById(req.user._id);
 
         
-        const targetUserEmail = {
-            from: `SkillSwap Admin <${process.env.EMAIL_USER}>`,
+        // Queue emails instead of sending synchronously
+        await addEmailJob({
             to: targetUser.email,
             subject: 'New SkillSwap Connection Request',
             html: `
@@ -73,11 +57,10 @@ const sendConnectionRequest = async (req, res) => {
                     </div>
                 </div>
             `
-        };
+        });
 
-        
-        const requestingUserEmail = {
-            from: `SkillSwap Admin <${process.env.EMAIL_USER}>`,
+        // Queue confirmation email to requester
+        await addEmailJob({
             to: requestingUser.email,
             subject: 'Your SkillSwap Connection Request - Confirmation',
             html: `
@@ -104,23 +87,15 @@ const sendConnectionRequest = async (req, res) => {
                     </div>
                 </div>
             `
-        };
+        });
 
-        
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            throw new Error('Email configuration is missing. Please check your environment variables.');
-        }
-
-        
-        await new Promise((resolve, reject) => {
-            transporter.verify(function (error, success) {
-                if (error) {
-                    console.error('SMTP connection error:', error);
-                    reject(new Error('Failed to connect to email server'));
-                } else {
-                    resolve(success);
-                }
-            });
+        // Log activity
+        await addActivityLogJob({
+            userId: req.user._id,
+            action: 'connection_request_sent',
+            targetUserId: targetUserId,
+            skillInterested,
+            timestamp: new Date()
         });
 
         
@@ -129,20 +104,7 @@ const sendConnectionRequest = async (req, res) => {
             message: 'Connection request sent successfully'
         });
 
-        
-        try {
-            const [targetInfo, requesterInfo] = await Promise.all([
-                transporter.sendMail(targetUserEmail),
-                transporter.sendMail(requestingUserEmail)
-            ]);
-            
-            console.log('Emails sent successfully:', {
-                targetEmail: targetInfo.response,
-                requesterEmail: requesterInfo.response
-            });
-        } catch (emailError) {
-            console.error('Email sending error:', emailError);
-        }
+
 
     } catch (error) {
         console.error('Request processing error:', error);
