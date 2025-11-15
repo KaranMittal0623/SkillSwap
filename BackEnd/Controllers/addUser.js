@@ -1,5 +1,6 @@
 const User = require('../models/userSchema');
 const UserExperience = require('../models/userExperience');
+const { client } = require('../config/redis');
 
 const addUser = async (req, res) => {
     try {
@@ -33,6 +34,9 @@ const addUser = async (req, res) => {
         });
 
         await userExperience.save();
+
+        // Invalidate skills cache since new user was added
+        await client.del('allSkills');
 
         res.status(201).json({
             success: true,

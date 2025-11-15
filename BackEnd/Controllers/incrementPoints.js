@@ -1,4 +1,7 @@
 const UserExperience = require('../models/userExperience');
+const { client } = require('../config/redis');
+
+const getUserExperienceCacheKey = (userId) => `userExp:${userId}`;
 
 const incrementPoints = async (req, res) => {
     try {
@@ -16,6 +19,9 @@ const incrementPoints = async (req, res) => {
 
         // Add 1 point using the method we created in the model
         await userExp.addPoints(1, skillName, false);
+
+        // Invalidate the cache for this user's experience
+        await client.del(getUserExperienceCacheKey(userId));
 
         res.status(200).json({
             success: true,
