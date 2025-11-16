@@ -9,8 +9,7 @@ import {
   Avatar,
   Box,
   Divider,
-  Chip,
-  Button
+  Chip
 } from '@mui/material';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';

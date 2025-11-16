@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Home from './components/Home';
 import Profile from './components/Profile';
 import SkillSearch from './components/SkillSearch';
+import ChatPage from './components/ChatPage';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import Footer from './components/Footer';
@@ -31,6 +32,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<SkillSearch />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/chat" element={<ChatPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
             </Routes>

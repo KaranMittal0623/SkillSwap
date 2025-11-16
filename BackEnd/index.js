@@ -4,6 +4,7 @@ const app = express();
 require('dotenv').config();
 const PORT = process.env.PORT || 5000;
 const userRoutes = require('./Routes/userRoutes');
+const chatRoutes = require('./Routes/chatRoutes');
 const {connectRedis} = require('./config/redis');
 
 // Queue imports
@@ -39,6 +40,7 @@ app.use((err, req, res, next) => {
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/',(req,res)=>{
     res.send('Hello World');

@@ -10,7 +10,7 @@ const SkillSearch = () => {
   const [error, setError] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [message, setMessage] = useState('');
-  const { user, sendConnectionRequest } = useUser();
+  const { sendConnectionRequest } = useUser();
 
   useEffect(() => {
     const fetchSkills = async () => {
