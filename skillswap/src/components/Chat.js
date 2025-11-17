@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
+import { Box, Typography, Chip } from '@mui/material';
 import './Chat.css';
 
 const Chat = ({ userId, targetUserId, targetUserName }) => {
@@ -11,6 +12,7 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
     const [socket, setSocket] = useState(null);
     const [conversationId, setConversationId] = useState(null);
     const [connectionStatus, setConnectionStatus] = useState('connecting');
+    const [targetUserSkills, setTargetUserSkills] = useState([]);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const messagesRef = useRef([]);
@@ -32,7 +34,7 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
             if (response.data.success) {
                 setMessages(response.data.data);
                 
-                // Generate conversation ID
+                // Generate conversation ID and room ID
                 const genConversationId = [userId, targetUserId].sort().join('_');
                 setConversationId(genConversationId);
                 
@@ -44,6 +46,31 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
             setIsLoading(false);
         }
     }, [userId, targetUserId]);
+
+    // Load target user skills
+    useEffect(() => {
+        const fetchUserSkills = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get(
+                    `http://localhost:5000/api/users/${targetUserId}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+                if (response.data.success) {
+                    setTargetUserSkills(response.data.data.skills || []);
+                }
+            } catch (error) {
+                console.error('Error loading user skills:', error);
+            }
+        };
+        if (targetUserId) {
+            fetchUserSkills();
+        }
+    }, [targetUserId]);
 
     // Scroll to bottom
     const scrollToBottom = () => {
@@ -81,10 +108,16 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
             // Register user
             newSocket.emit('user_join', { userId });
             
-            // Start chat with target user
+            // Start chat with target user and join room
+            const roomIdToUse = [userId, targetUserId].sort().join('_');
             newSocket.emit('start_chat', {
                 userId,
-                targetUserId
+                targetUserId,
+                roomId: roomIdToUse
+            });
+            newSocket.emit('join_room', {
+                roomId: roomIdToUse,
+                userId
             });
 
             // Load chat history
@@ -265,10 +298,24 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
     return (
         <div className="chat-container">
             <div className="chat-header">
-                <h2>{targetUserName}</h2>
-                <p className={`status ${connectionStatus}`}>
-                    {connectionStatus === 'connected' ? '🟢 Online' : connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Offline'}
-                </p>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" sx={{ mb: 0.5 }}>{targetUserName}</Typography>
+                        {targetUserSkills.length > 0 && (
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {targetUserSkills.slice(0, 3).map((skill, idx) => (
+                                    <Chip key={idx} label={skill} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
+                                ))}
+                                {targetUserSkills.length > 3 && (
+                                    <Typography variant="caption" sx={{ alignSelf: 'center' }}>+{targetUserSkills.length - 3} more</Typography>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
+                    <p className={`status ${connectionStatus}`} style={{ margin: 0 }}>
+                        {connectionStatus === 'connected' ? '🟢 Online' : connectionStatus === 'connecting' ? '🟡 Connecting...' : '🔴 Offline'}
+                    </p>
+                </Box>
             </div>
 
             <div className="chat-messages">

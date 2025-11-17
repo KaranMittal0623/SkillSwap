@@ -14,23 +14,46 @@ import {
   DialogContent
 } from '@mui/material';
 import { useUser } from '../context/UserContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import Chat from './Chat';
 
 const ChatPage = () => {
   const { user } = useUser();
   const navigate = useNavigate();
+  const { userId } = useParams();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [openChat, setOpenChat] = useState(false);
+  const [directChatUser, setDirectChatUser] = useState(null);
+  const [directChatLoading, setDirectChatLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
+    }
+
+    // If userId is in URL params, load that user for direct chat
+    if (userId) {
+      const loadDirectChatUser = async () => {
+        try {
+          setDirectChatLoading(true);
+          const response = await api.get(`/${userId}`);
+          if (response.data.success) {
+            setDirectChatUser(response.data.data);
+            setOpenChat(true);
+          }
+        } catch (err) {
+          console.error('Error loading user:', err);
+          setError('Failed to load user. Please try again.');
+        } finally {
+          setDirectChatLoading(false);
+        }
+      };
+      loadDirectChatUser();
     }
 
     const fetchConversations = async () => {
@@ -52,7 +75,7 @@ const ChatPage = () => {
     };
 
     fetchConversations();
-  }, [user, navigate]);
+  }, [user, navigate, userId]);
 
   const handleOpenChat = (conversation) => {
     setSelectedConversation(conversation);
@@ -233,13 +256,23 @@ const ChatPage = () => {
         }}
       >
         <DialogContent sx={{ p: 0, height: '100%' }}>
-          {selectedConversation && (
+          {directChatLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <CircularProgress />
+            </Box>
+          ) : directChatUser ? (
+            <Chat
+              userId={user._id}
+              targetUserId={directChatUser._id}
+              targetUserName={directChatUser.name}
+            />
+          ) : selectedConversation ? (
             <Chat
               userId={user._id}
               targetUserId={selectedConversation.participants.find(p => p._id !== user._id)?._id}
               targetUserName={selectedConversation.participants.find(p => p._id !== user._id)?.name}
             />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </Container>

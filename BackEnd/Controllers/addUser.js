@@ -7,6 +7,14 @@ const addUser = async (req, res) => {
     try {
         const { name, email, password, skillsOffered, skillsWanted } = req.body;
 
+        // Validate required fields
+        if (!name || !email || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Name, email, and password are required' 
+            });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -16,17 +24,27 @@ const addUser = async (req, res) => {
             });
         }
 
-        // Create new user
+        // Validate and sanitize skills arrays
+        const sanitizedSkillsOffered = Array.isArray(skillsOffered) 
+            ? skillsOffered.filter(skill => typeof skill === 'string' && skill.trim().length > 0).map(s => s.trim())
+            : [];
+        const sanitizedSkillsWanted = Array.isArray(skillsWanted) 
+            ? skillsWanted.filter(skill => typeof skill === 'string' && skill.trim().length > 0).map(s => s.trim())
+            : [];
+
+        // Create new user with skills
         const newUser = new User({
-            name,
-            email,
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
             password,
-            skillsOffered: skillsOffered || [],
-            skillsWanted: skillsWanted || []
+            skillsOffered: sanitizedSkillsOffered,
+            skillsWanted: sanitizedSkillsWanted
         });
 
-        // Save the user
+        // Save the user with skills
         await newUser.save();
+        
+        console.log(`✓ User created: ${newUser.email} with ${sanitizedSkillsOffered.length} offered skills and ${sanitizedSkillsWanted.length} wanted skills`);
 
         // Create user experience record
         const userExperience = new UserExperience({
@@ -87,8 +105,15 @@ const addUser = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: 'User created successfully',
-            data: newUser
+            message: 'User created successfully with skills',
+            data: {
+                _id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                skillsOffered: newUser.skillsOffered,
+                skillsWanted: newUser.skillsWanted,
+                createdAt: newUser.createdAt
+            }
         });
 
     } catch (error) {

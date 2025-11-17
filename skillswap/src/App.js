@@ -33,6 +33,7 @@ function App() {
               <Route path="/search" element={<SkillSearch />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:userId" element={<ChatPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
             </Routes>

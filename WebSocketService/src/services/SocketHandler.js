@@ -30,8 +30,8 @@ class SocketHandler {
 
             // Start chat session
             socket.on('start_chat', async (data) => {
-                const { userId, targetUserId } = data;
-                const conversationId = this.generateConversationId(userId, targetUserId);
+                const { userId, targetUserId, roomId } = data;
+                const conversationId = roomId || this.generateConversationId(userId, targetUserId);
 
                 // Store active chat
                 this.activeChats.set(conversationId, {
@@ -42,7 +42,7 @@ class SocketHandler {
                 // Join conversation room
                 socket.join(conversationId);
 
-                console.log(`Chat started: ${userId} <-> ${targetUserId}`);
+                console.log(`Chat started: ${userId} <-> ${targetUserId}, Room: ${conversationId}`);
 
                 // Subscribe to chat messages from other services
                 await this.pubSubManager.subscribe(
@@ -65,6 +65,20 @@ class SocketHandler {
                         initiatorId: userId
                     });
                 }
+            });
+
+            // Join room handler
+            socket.on('join_room', (data) => {
+                const { roomId, userId } = data;
+                socket.join(roomId);
+                console.log(`User ${userId} joined room ${roomId}`);
+                
+                // Notify others in the room that user joined
+                socket.to(roomId).emit('user_joined_room', {
+                    userId,
+                    roomId,
+                    timestamp: new Date()
+                });
             });
 
             // Send message
@@ -96,15 +110,19 @@ class SocketHandler {
                         createdAt: newMessage.createdAt
                     });
 
-                    // Emit to both users in conversation
-                    this.io.to(conversationId).emit('message_sent', {
+                    // Emit to room - both users will receive it
+                    this.io.to(conversationId).emit('new_message', {
                         _id: newMessage._id,
+                        conversationId,
                         senderId: userId,
+                        receiverId: targetUserId,
                         message,
+                        messageType: 'text',
+                        isRead: false,
                         createdAt: newMessage.createdAt
                     });
 
-                    console.log(`Message sent in ${conversationId}`);
+                    console.log(`Message sent in room ${conversationId} from ${userId} to ${targetUserId}`);
 
                 } catch (error) {
                     console.error('Error sending message:', error);

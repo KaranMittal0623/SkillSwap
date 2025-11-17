@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Container, TextField, Grid, Card, CardContent, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextareaAutosize } from '@mui/material';
+import { Container, TextField, Grid, Card, CardContent, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextareaAutosize, Box, Chip } from '@mui/material';
 import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import ChatIcon from '@mui/icons-material/Chat';
 
 const SkillSearch = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [message, setMessage] = useState('');
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
   const { sendConnectionRequest } = useUser();
 
   useEffect(() => {
@@ -36,7 +40,21 @@ const SkillSearch = () => {
       _id: skill.user._id,
       name: skill.user.name,
       email: skill.user.email,
-      skill: skill.name
+      skill: skill.name,
+      skills: skill.user.skills || []
+    });
+    setShowRequestDialog(true);
+  };
+
+  const handleStartChat = (skill) => {
+    // Navigate to chat with the specific user
+    navigate(`/chat/${skill.user._id}`, { 
+      state: { 
+        otherUser: {
+          _id: skill.user._id,
+          name: skill.user.name
+        }
+      } 
     });
   };
 
@@ -95,14 +113,39 @@ const SkillSearch = () => {
                 <Typography variant="body2" color="textSecondary">
                   Level: {skill.level}
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  style={{ marginTop: '1rem' }}
-                  onClick={() => handleConnect(skill)}
-                >
-                  Request to Learn {skill.name}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 1 }}>
+                  {skill.user.skills && skill.user.skills.length > 0 && (
+                    <>
+                      <Typography variant="caption" sx={{ width: '100%' }} color="textSecondary">
+                        Their Skills:
+                      </Typography>
+                      {skill.user.skills.slice(0, 3).map((s, idx) => (
+                        <Chip key={idx} label={s} size="small" variant="outlined" />
+                      ))}
+                    </>
+                  )}
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    size="small"
+                    onClick={() => handleConnect(skill)}
+                    sx={{ flex: 1 }}
+                  >
+                    Request
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    color="primary" 
+                    size="small"
+                    startIcon={<ChatIcon />}
+                    onClick={() => handleStartChat(skill)}
+                    sx={{ flex: 1 }}
+                  >
+                    Chat
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -110,12 +153,24 @@ const SkillSearch = () => {
       </Grid>
 
       {/* Connection Request Dialog */}
-      <Dialog open={!!selectedUser} onClose={() => setSelectedUser(null)}>
+      <Dialog open={showRequestDialog} onClose={() => { setShowRequestDialog(false); setSelectedUser(null); }}>
         <DialogTitle>Request to Learn {selectedUser?.skill}</DialogTitle>
         <DialogContent>
           <Typography variant="h6" gutterBottom color="primary">
             Connecting with {selectedUser?.name}
           </Typography>
+          {selectedUser?.skills && selectedUser.skills.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Their Skills:
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {selectedUser.skills.map((skill, idx) => (
+                  <Chip key={idx} label={skill} size="small" />
+                ))}
+              </Box>
+            </Box>
+          )}
           <Typography variant="body2" color="textSecondary" gutterBottom>
             Write a message explaining why you'd like to learn {selectedUser?.skill} and what you hope to achieve.
             This will help {selectedUser?.name} understand your learning goals.
@@ -137,7 +192,7 @@ const SkillSearch = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSelectedUser(null)}>Cancel</Button>
+          <Button onClick={() => { setShowRequestDialog(false); setSelectedUser(null); }}>Cancel</Button>
           <Button onClick={handleSendRequest} color="primary" variant="contained">
             Send Request
           </Button>
