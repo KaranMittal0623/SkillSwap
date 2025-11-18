@@ -13,7 +13,7 @@ const { setupEmailProcessor } = require('./utils/emailProcessor');
 const { setupActivityProcessor, setupPointsProcessor, setupNotificationProcessor } = require('./utils/jobProcessors');
 
 // Connect to Redis
-
+connectRedis();
 
 // Initialize queues and processors
 setupQueueHandlers();
