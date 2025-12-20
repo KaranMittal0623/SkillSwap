@@ -23,7 +23,7 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
             setIsLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `http://localhost:5000/api/chat/history/${targetUserId}?limit=50&page=1`,
+                `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/chat/history/${targetUserId}?limit=50&page=1`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -53,7 +53,7 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
             try {
                 const token = localStorage.getItem('token');
                 const response = await axios.get(
-                    `http://localhost:5000/api/users/${targetUserId}`,
+                    `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/users/${targetUserId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -137,15 +137,29 @@ const Chat = ({ userId, targetUserId, targetUserName }) => {
         // Message events
         newSocket.on('new_message', (message) => {
             console.log('New message received:', message);
-            setMessages(prev => [...prev, message]);
+            // Add timestamp if not already present
+            const messageWithTimestamp = {
+                ...message,
+                createdAt: message.createdAt || new Date().toISOString()
+            };
+            
+            // Check if this message already exists to avoid duplicates
+            setMessages(prev => {
+                const messageExists = prev.some(msg => msg._id === messageWithTimestamp._id);
+                if (messageExists) {
+                    console.warn('Duplicate message detected, skipping:', messageWithTimestamp._id);
+                    return prev;
+                }
+                return [...prev, messageWithTimestamp];
+            });
             scrollToBottom();
         });
 
         newSocket.on('message_sent', (message) => {
-            console.log('Message sent:', message);
+            console.log('Message sent confirmation:', message);
             setMessages(prev =>
                 prev.map(msg =>
-                    msg._id === message._id ? message : msg
+                    msg._id === message._id ? { ...msg, ...message } : msg
                 )
             );
         });

@@ -8,7 +8,7 @@ class SocketHandler {
         this.activeChats = new Map(); // Map to track active conversations
     }
 
-    // Initialize socket handlers
+    // Initialize socket handlers 
     initialize() {
         this.io.on('connection', (socket) => {
             console.log(`User connected: ${socket.id}`);
@@ -44,19 +44,9 @@ class SocketHandler {
 
                 console.log(`Chat started: ${userId} <-> ${targetUserId}, Room: ${conversationId}`);
 
-                // Subscribe to chat messages from other services
-                await this.pubSubManager.subscribe(
-                    `chat:${conversationId}`,
-                    async (message) => {
-                        // Broadcast to all sockets in this conversation
-                        this.io.to(conversationId).emit('new_message', message);
-
-                        // Mark as read if receiver is online
-                        if (message.receiverId && this.userSockets.has(message.receiverId)) {
-                            await this.markMessageAsRead(message._id);
-                        }
-                    }
-                );
+                // Note: We don't subscribe to Redis pub/sub here for same-instance messages
+                // Socket.io broadcast in send_message handler is sufficient for this instance
+                // Redis pub/sub would cause duplicate messages (socket.io emit + pub/sub subscription)
 
                 // Notify receiver that chat is active
                 if (this.userSockets.has(targetUserId)) {
@@ -98,8 +88,8 @@ class SocketHandler {
 
                     await newMessage.save();
 
-                    // Publish to Redis pub/sub
-                    await this.pubSubManager.publish(`chat:${conversationId}`, {
+                    // Create message object to send
+                    const messageObject = {
                         _id: newMessage._id,
                         conversationId,
                         senderId: userId,
@@ -108,19 +98,14 @@ class SocketHandler {
                         messageType: 'text',
                         isRead: false,
                         createdAt: newMessage.createdAt
-                    });
+                    };
 
                     // Emit to room - both users will receive it
-                    this.io.to(conversationId).emit('new_message', {
-                        _id: newMessage._id,
-                        conversationId,
-                        senderId: userId,
-                        receiverId: targetUserId,
-                        message,
-                        messageType: 'text',
-                        isRead: false,
-                        createdAt: newMessage.createdAt
-                    });
+                    // This is the ONLY place we emit to avoid duplicate messages
+                    this.io.to(conversationId).emit('new_message', messageObject);
+
+                    // Also publish to Redis for other services/instances
+                    await this.pubSubManager.publish(`chat:${conversationId}`, messageObject);
 
                     console.log(`Message sent in room ${conversationId} from ${userId} to ${targetUserId}`);
 

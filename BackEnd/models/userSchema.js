@@ -2,6 +2,27 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const skillSchema = new mongoose.Schema({
+    skill: {
+        type: String,
+        required: true
+    },
+    level: {
+        type: Number,
+        min: 1,
+        max: 5,
+        default: 1
+    },
+    dateAdded: {
+        type: Date,
+        default: Date.now
+    },
+    dateModified: {
+        type: Date,
+        default: Date.now
+    }
+});
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -20,10 +41,24 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 6
     },
-    skillsOffered: [{
-        type: String
-    }],
-    skillsWanted: [{
+    bio: {
+        type: String,
+        maxlength: 500,
+        trim: true
+    },
+    profilePicture: {
+        type: String,
+        default: null
+    },
+    level: {
+        type: Number,
+        default: 1,
+        min: 1
+    },
+    skillsOffered: [skillSchema],
+    skillsWanted: [skillSchema],
+    // Legacy field for backward compatibility
+    skills: [{
         type: String
     }]
 }, {

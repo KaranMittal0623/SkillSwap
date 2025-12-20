@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/users';  // Adjust port if different
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/users`;
 
 // Create axios instance with default config
 const api = axios.create({
@@ -35,43 +35,55 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         console.error('Response Error:', error);
+        console.error('Error Config:', error.config);
+        console.error('Error Message:', error.message);
+        console.error('Error Response:', error.response);
         
         // Handle different types of errors
         if (!error.response) {
             // Network error or server not responding
+            console.error('Network Error - No response from server');
             return Promise.reject({
-                message: 'Unable to reach the server. Please check your connection.',
-                error: error
+                message: 'Unable to reach the server. Please check if the server is running and you have internet connection.',
+                error: error,
+                details: error.message
             });
         }
 
-        switch (error.response.status) {
+        const status = error.response.status;
+        const data = error.response.data;
+
+        console.error(`HTTP Error ${status}:`, data);
+
+        switch (status) {
             case 401:
                 localStorage.removeItem('token');
                 window.location.href = '/login';
-                break;
+                return Promise.reject({
+                    message: 'Session expired. Please login again.',
+                    error: data
+                });
             case 404:
                 return Promise.reject({
-                    message: 'Resource not found',
-                    error: error.response.data
+                    message: data?.message || 'Resource not found',
+                    error: data
                 });
             case 400:
                 return Promise.reject({
-                    message: error.response.data.message || 'Invalid request',
-                    error: error.response.data
+                    message: data?.message || 'Invalid request',
+                    error: data
                 });
             case 500:
                 return Promise.reject({
-                    message: 'Server error. Please try again later.',
-                    error: error.response.data
+                    message: data?.message || 'Server error. Please try again later.',
+                    error: data
                 });
             default:
                 return Promise.reject({
-                    message: error.response.data.message || 'Something went wrong',
-                    error: error.response.data
+                    message: data?.message || 'Something went wrong',
+                    error: data
                 });
         }
-        return Promise.reject(error);
     }
 );
 

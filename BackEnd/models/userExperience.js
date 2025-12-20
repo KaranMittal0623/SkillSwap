@@ -32,7 +32,27 @@ const userExperienceSchema = new mongoose.Schema({
     level: {
         type: Number,
         default: 1
-    }
+    },
+    acceptedTeachingRequests: {
+        type: Number,
+        default: 0
+    },
+    teachingHistory: [{
+        studentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        skill: String,
+        completedAt: {
+            type: Date,
+            default: Date.now
+        },
+        rating: {
+            type: Number,
+            min: 1,
+            max: 5
+        }
+    }]
 }, {
     timestamps: true
 });

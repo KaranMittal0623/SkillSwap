@@ -11,7 +11,7 @@ class PubSubManager {
         });
 
         this.handlers = new Map();
-    }
+    } 
 
     async connect() {
         try {

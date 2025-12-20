@@ -21,13 +21,30 @@ const SkillSearch = () => {
       try {
         setLoading(true);
         setError('');
-        console.log('Fetching skills...');
+        const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/users/skills`;
+        console.log('Fetching skills from:', apiUrl);
         const response = await api.get('/skills');
         console.log('Skills response:', response.data);
-        setSkills(response.data.skills);
+        
+        if (response.data.success) {
+          const skillsList = response.data.skills || [];
+          setSkills(skillsList);
+          console.log(`✓ Skills loaded: ${skillsList.length} total skills`);
+          
+          if (skillsList.length === 0) {
+            console.warn('⚠️ No skills found in database');
+          }
+        } else {
+          setError('No skills data received from server');
+          console.error('Response was not successful:', response.data);
+        }
       } catch (err) {
-        console.error('Error fetching skills:', err);
-        setError(err.message || 'Failed to fetch skills. Please try again.');
+        console.error('❌ Full error object:', err);
+        console.error('Error message:', err.message);
+        console.error('Error details:', err.details);
+        
+        const errorMessage = err.message || err.details || 'Failed to fetch skills. Please try again.';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -40,7 +57,7 @@ const SkillSearch = () => {
       _id: skill.user._id,
       name: skill.user.name,
       email: skill.user.email,
-      skill: skill.name,
+      skill: skill.skill,
       skills: skill.user.skills || []
     });
     setShowRequestDialog(true);
@@ -84,11 +101,56 @@ const SkillSearch = () => {
   };
 
   const filteredSkills = skills.filter(skill =>
-    skill.name.toLowerCase().includes(searchQuery.toLowerCase())
+    skill && skill.skill && skill.skill.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) return <Typography>Loading...</Typography>;
-  if (error) return <Typography color="error">{error}</Typography>;
+  if (loading) {
+    return (
+      <Container maxWidth="md" style={{ marginTop: '2rem' }}>
+        <Typography variant="h6">Loading skills...</Typography>
+        <Typography variant="body2" color="textSecondary">
+          Fetching available skills from the database...
+        </Typography>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="md" style={{ marginTop: '2rem' }}>
+        <Typography color="error" variant="h6">Error Loading Skills</Typography>
+        <Typography color="error" style={{ marginTop: '1rem' }}>
+          {error}
+        </Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginTop: '1rem' }}>
+          Please check that:
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          1. Backend server is running on port 5001
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          2. MongoDB is running and connected
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          3. Check browser console (F12) for more details
+        </Typography>
+      </Container>
+    );
+  }
+
+  if (skills.length === 0) {
+    return (
+      <Container maxWidth="md" style={{ marginTop: '2rem' }}>
+        <Typography variant="h6">No Skills Available</Typography>
+        <Typography color="textSecondary" style={{ marginTop: '1rem' }}>
+          No one has added skills yet. Be the first to add your skills!
+        </Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginTop: '1rem' }}>
+          Go to your profile and add skills you can teach or want to learn.
+        </Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="md" style={{ marginTop: '2rem' }}>
@@ -106,7 +168,7 @@ const SkillSearch = () => {
           <Grid item xs={12} key={skill._id}>
             <Card>
               <CardContent>
-                <Typography variant="h6">{skill.name}</Typography>
+                <Typography variant="h6">{skill.skill}</Typography>
                 <Typography variant="body2" color="textSecondary">
                   Offered by: {skill.user.name}
                 </Typography>

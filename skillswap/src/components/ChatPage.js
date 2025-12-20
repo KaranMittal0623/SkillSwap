@@ -16,6 +16,7 @@ import {
 import { useUser } from '../context/UserContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import chatApi from '../services/chatApi';
 import Chat from './Chat';
 
 const ChatPage = () => {
@@ -59,16 +60,24 @@ const ChatPage = () => {
     const fetchConversations = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/chat/conversations');
+        const response = await chatApi.get('/conversations');
         
         if (response.data.success) {
-          setConversations(response.data.data);
+          // Transform the data to match expected format
+          const transformedConversations = response.data.data.map(conv => ({
+            _id: conv._id,
+            participants: conv.otherUser ? [conv.otherUser[0]] : [],
+            lastMessage: conv.lastMessage,
+            lastMessageTime: conv.lastMessageTime,
+            unreadCount: conv.unreadCount || 0
+          }));
+          setConversations(transformedConversations);
         } else {
           setError(response.data.message || 'Failed to load conversations');
         }
       } catch (err) {
         console.error('Error fetching conversations:', err);
-        setError('Failed to load conversations. Please try again.');
+        setError(err.message || 'Failed to load conversations. Please try again.');
       } finally {
         setLoading(false);
       }

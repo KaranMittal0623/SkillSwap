@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 require('dotenv').config();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const userRoutes = require('./Routes/userRoutes');
 const chatRoutes = require('./Routes/chatRoutes');
 const {connectRedis} = require('./config/redis');
@@ -23,8 +23,20 @@ setupPointsProcessor();
 setupNotificationProcessor();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        process.env.CLIENT_URL || 'http://localhost:3000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
+
+// Serve static files for uploads
+app.use('/uploads', express.static('uploads'));
 
 
 
@@ -43,8 +55,34 @@ app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 
 app.get('/',(req,res)=>{
-    res.send('Hello World');
+    res.json({
+        message: 'SkillSwap API is running',
+        version: '1.0.0',
+        status: 'healthy'
+    });
 })
+
+// Diagnostic endpoint
+app.get('/api/health', async (req, res) => {
+    try {
+        const mongoConnected = require('mongoose').connection.readyState === 1;
+        const redisConnected = require('./config/redis').client.isOpen;
+        
+        res.status(200).json({
+            success: true,
+            server: 'running',
+            database: mongoConnected ? 'connected' : 'disconnected',
+            redis: redisConnected ? 'connected' : 'disconnected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Health check failed',
+            error: error.message
+        });
+    }
+});
 
 const connectDB = require('./config/dataBase');
 connectDB();

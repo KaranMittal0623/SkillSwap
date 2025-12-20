@@ -24,12 +24,16 @@ const addUser = async (req, res) => {
             });
         }
 
-        // Validate and sanitize skills arrays
+        // Validate and sanitize skills arrays - convert strings to skill objects
         const sanitizedSkillsOffered = Array.isArray(skillsOffered) 
-            ? skillsOffered.filter(skill => typeof skill === 'string' && skill.trim().length > 0).map(s => s.trim())
+            ? skillsOffered
+                .filter(skill => typeof skill === 'string' && skill.trim().length > 0)
+                .map(skill => ({ skill: skill.trim() }))
             : [];
         const sanitizedSkillsWanted = Array.isArray(skillsWanted) 
-            ? skillsWanted.filter(skill => typeof skill === 'string' && skill.trim().length > 0).map(s => s.trim())
+            ? skillsWanted
+                .filter(skill => typeof skill === 'string' && skill.trim().length > 0)
+                .map(skill => ({ skill: skill.trim() }))
             : [];
 
         // Create new user with skills
@@ -74,8 +78,8 @@ const addUser = async (req, res) => {
                             <h3 style="color: #4CAF50;">Your Profile Summary:</h3>
                             <p><strong>Name:</strong> ${newUser.name}</p>
                             <p><strong>Email:</strong> ${newUser.email}</p>
-                            <p><strong>Skills Offered:</strong> ${newUser.skillsOffered.length > 0 ? newUser.skillsOffered.join(', ') : 'Not specified yet'}</p>
-                            <p><strong>Skills Wanted:</strong> ${newUser.skillsWanted.length > 0 ? newUser.skillsWanted.join(', ') : 'Not specified yet'}</p>
+                            <p><strong>Skills Offered:</strong> ${newUser.skillsOffered.length > 0 ? newUser.skillsOffered.map(s => s.skill).join(', ') : 'Not specified yet'}</p>
+                            <p><strong>Skills Wanted:</strong> ${newUser.skillsWanted.length > 0 ? newUser.skillsWanted.map(s => s.skill).join(', ') : 'Not specified yet'}</p>
                         </div>
 
                         <h3 style="color: #4CAF50;">Getting Started:</h3>
@@ -110,8 +114,8 @@ const addUser = async (req, res) => {
                 _id: newUser._id,
                 name: newUser.name,
                 email: newUser.email,
-                skillsOffered: newUser.skillsOffered,
-                skillsWanted: newUser.skillsWanted,
+                skillsOffered: newUser.skillsOffered.map(s => s.skill),
+                skillsWanted: newUser.skillsWanted.map(s => s.skill),
                 createdAt: newUser.createdAt
             }
         });

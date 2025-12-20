@@ -88,19 +88,19 @@ app.get('/health', (req, res) => {
 });
 
 // Stats endpoint
-app.get('/stats', (req, res) => {
-    if (!socketHandler) {
-        return res.status(503).json({ error: 'Service not initialized' });
-    }
+// app.get('/stats', (req, res) => {
+//     if (!socketHandler) {
+//         return res.status(503).json({ error: 'Service not initialized' });
+//     }
 
-    res.status(200).json({
-        success: true,
-        activeUsers: socketHandler.getActiveUsers().length,
-        activeConversations: socketHandler.getActiveConversations().length,
-        users: socketHandler.getActiveUsers(),
-        conversations: socketHandler.getActiveConversations()
-    });
-});
+//     res.status(200).json({
+//         success: true,
+//         activeUsers: socketHandler.getActiveUsers().length,
+//         activeConversations: socketHandler.getActiveConversations().length,
+//         users: socketHandler.getActiveUsers(),
+//         conversations: socketHandler.getActiveConversations()
+//     });
+// });
 
 // Start server
 const PORT = process.env.WEBSOCKET_PORT || 8000;
